@@ -21,9 +21,9 @@ export GOOGLE_CLIENT_ID=
 export GOOGLE_CLIENT_SECRET=
 `)
 	}
-
-	filepath := os.Args[1]
-	filename := path.Base(filepath)
+	if len(os.Args) < 2 {
+		log.Fatalf("usage: %s FILES...", os.Args[0])
+	}
 
 	ctx := context.Background()
 	client, err := NewOAuthClient(ctx, clientID, clientSecret)
@@ -32,6 +32,18 @@ export GOOGLE_CLIENT_SECRET=
 	}
 
 	helper := NewPhotosHelper(client)
+	photos, err := photoslibrary.New(client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, filepath := range os.Args[1:] {
+		upload(filepath, helper, photos)
+	}
+}
+
+func upload(filepath string, helper *PhotosHelper, photos *photoslibrary.Service) {
+	filename := path.Base(filepath)
 	log.Printf("Uploading %s", filename)
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -43,11 +55,6 @@ export GOOGLE_CLIENT_SECRET=
 		log.Fatal(err)
 	}
 	log.Printf("Uploaded %s as token %s", filename, uploadToken)
-
-	photos, err := photoslibrary.New(client)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	log.Printf("Adding media %s", filename)
 	batch, err := photos.MediaItems.BatchCreate(&photoslibrary.BatchCreateMediaItemsRequest{
